@@ -1,0 +1,18 @@
+{
+  "name": "ugc-studio",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "pnpm run --parallel dev:api dev:web",
+    "dev:web": "pnpm --filter @ugc-studio/web dev",
+    "dev:api": "pnpm --filter @ugc-studio/api dev",
+    "build": "pnpm --filter @ugc-studio/shared build && pnpm --filter @ugc-studio/api build && pnpm --filter @ugc-studio/web build",
+    "db:generate": "pnpm --filter @ugc-studio/api db:generate",
+    "db:migrate": "pnpm --filter @ugc-studio/api db:migrate",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

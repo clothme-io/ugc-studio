@@ -1,0 +1,19 @@
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiSecretGuard } from '../../common/api-secret.guard';
+import { ScriptsService } from './scripts.service';
+
+@Controller('scripts')
+@UseGuards(ApiSecretGuard)
+export class ScriptsController {
+  constructor(private scripts: ScriptsService) {}
+
+  @Post('remix')
+  remix(@Body() body: { analysisId: string; brandContext?: string }) {
+    return this.scripts.remix(body.analysisId, body.brandContext);
+  }
+
+  @Get(':id')
+  get(@Param('id') id: string) {
+    return this.scripts.get(id);
+  }
+}
