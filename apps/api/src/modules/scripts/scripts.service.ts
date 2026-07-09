@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import type { VideoAnalysis } from '@ugc-studio/shared';
 import { DB } from '../../db/db.module';
 import type { Database } from '../../db';
@@ -14,6 +14,18 @@ export class ScriptsService {
     private ai: AiService,
     private analysis: AnalysisService,
   ) {}
+
+  async list() {
+    return this.db.select().from(remixScripts).orderBy(desc(remixScripts.createdAt));
+  }
+
+  async listByAnalysis(analysisId: string) {
+    return this.db
+      .select()
+      .from(remixScripts)
+      .where(eq(remixScripts.analysisId, analysisId))
+      .orderBy(desc(remixScripts.createdAt));
+  }
 
   async remix(analysisId: string, brandContext?: string) {
     const analysisRow = await this.analysis.get(analysisId);

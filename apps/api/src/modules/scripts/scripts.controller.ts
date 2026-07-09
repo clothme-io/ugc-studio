@@ -7,6 +7,16 @@ import { ScriptsService } from './scripts.service';
 export class ScriptsController {
   constructor(private scripts: ScriptsService) {}
 
+  @Get()
+  list() {
+    return this.scripts.list();
+  }
+
+  @Get('analysis/:analysisId')
+  listByAnalysis(@Param('analysisId') analysisId: string) {
+    return this.scripts.listByAnalysis(analysisId);
+  }
+
   @Post('remix')
   remix(@Body() body: { analysisId: string; brandContext?: string }) {
     return this.scripts.remix(body.analysisId, body.brandContext);

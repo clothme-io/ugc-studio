@@ -1,12 +1,16 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { desc } from 'drizzle-orm';
+import { StorageService } from '../../common/storage/storage.service';
 import { DB } from '../../db/db.module';
 import type { Database } from '../../db';
 import { ugcExports } from '../../db/schema';
 
 @Injectable()
 export class ExportsService {
-  constructor(@Inject(DB) private db: Database) {}
+  constructor(
+    @Inject(DB) private db: Database,
+    private storage: StorageService,
+  ) {}
 
   async create(input: {
     editProjectId?: string;
@@ -27,13 +31,22 @@ export class ExportsService {
         targetAccountIds: input.targetAccountIds,
       })
       .returning();
-    return row;
+
+    return {
+      ...row,
+      downloadUrl: this.storage.resolveDownloadUrl(input.outputPath),
+    };
   }
 
   async list() {
-    return this.db
+    const rows = await this.db
       .select()
       .from(ugcExports)
       .orderBy(desc(ugcExports.createdAt));
+
+    return rows.map((row) => ({
+      ...row,
+      downloadUrl: this.storage.resolveDownloadUrl(row.outputPath),
+    }));
   }
 }

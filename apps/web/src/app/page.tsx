@@ -5,7 +5,15 @@ import { Card, Badge } from '@/components/ui';
 import { api, isMockMode } from '@/lib/api';
 
 export default async function DashboardPage() {
-  let health: { status: string; services: { database: string; openai: boolean; heygen: boolean } } = {
+  let health: {
+    status: string;
+    services: {
+      database: string;
+      openai: boolean;
+      heygen: boolean;
+      llm?: { configured: boolean; provider: string | null; model: string | null };
+    };
+  } = {
     status: 'unknown',
     services: { database: 'error', openai: false, heygen: false },
   };
@@ -41,7 +49,14 @@ export default async function DashboardPage() {
         <Badge variant={health.status === 'ok' ? 'success' : 'warning'}>
           API {health.status === 'ok' ? 'online' : 'degraded'}
         </Badge>
-        <Badge variant="neutral">OpenAI {health.services.openai ? '✓' : 'mock'}</Badge>
+        <Badge variant={health.services.openai ? 'success' : 'neutral'}>
+          LLM{' '}
+          {health.services.llm?.configured
+            ? `${health.services.llm.provider} (${health.services.llm.model})`
+            : health.services.openai
+              ? '✓'
+              : 'not configured'}
+        </Badge>
         <Badge variant="neutral">HeyGen {health.services.heygen ? '✓' : 'mock'}</Badge>
       </div>
 

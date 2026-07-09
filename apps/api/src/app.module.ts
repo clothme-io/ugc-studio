@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
+import { StorageModule } from './common/storage/storage.module';
 import { DbModule } from './db/db.module';
 import { HealthController } from './health.controller';
 import { AccountsModule } from './modules/accounts/accounts.module';
@@ -11,6 +12,8 @@ import { EditorModule } from './modules/editor/editor.module';
 import { AiUgcModule } from './modules/ai-ugc/ai-ugc.module';
 import { AvatarsModule } from './modules/avatars/avatars.module';
 import { ExportsModule } from './modules/exports/exports.module';
+import { ActivityModule } from './modules/activity/activity.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
@@ -21,6 +24,7 @@ import { ExportsModule } from './modules/exports/exports.module';
         join(process.cwd(), '../../.env'),
       ],
     }),
+    StorageModule,
     DbModule,
     AccountsModule,
     VideosModule,
@@ -30,6 +34,8 @@ import { ExportsModule } from './modules/exports/exports.module';
     AiUgcModule,
     AvatarsModule,
     ExportsModule,
+    ActivityModule,
+    FilesModule,
   ],
   controllers: [HealthController],
 })

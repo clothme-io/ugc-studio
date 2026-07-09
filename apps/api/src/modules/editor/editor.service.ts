@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { TextOverlay } from '@ugc-studio/shared';
+import { StorageService } from '../../common/storage/storage.service';
 import { DB } from '../../db/db.module';
 import type { Database } from '../../db';
 import { editProjects } from '../../db/schema';
@@ -20,11 +21,10 @@ export interface EditState {
 
 @Injectable()
 export class EditorService {
-  private uploadDir: string;
-
-  constructor(@Inject(DB) private db: Database) {
-    this.uploadDir = process.env.UPLOAD_DIR ?? './uploads';
-  }
+  constructor(
+    @Inject(DB) private db: Database,
+    private storage: StorageService,
+  ) {}
 
   async create(input: {
     name: string;
@@ -75,9 +75,9 @@ export class EditorService {
   async render(id: string, sourceFilePath: string) {
     const project = await this.get(id);
     const state = project.editState as EditState;
-    await fs.mkdir(this.uploadDir, { recursive: true });
+    await fs.mkdir(this.storage.uploadDir, { recursive: true });
 
-    const outputPath = path.join(this.uploadDir, `${id}-render.mp4`);
+    const localOutput = path.join(this.storage.uploadDir, `${id}-render.mp4`);
     const duration = state.trimEndSec - state.trimStartSec;
 
     const args = [
@@ -88,16 +88,29 @@ export class EditorService {
       '-c:v', 'libx264',
       '-c:a', 'aac',
       '-y',
-      outputPath,
+      localOutput,
     ];
 
     try {
       await execFileAsync('ffmpeg', args);
+      const remoteKey = `renders/${id}-render.mp4`;
+      const published = await this.storage.publishFile(localOutput, remoteKey);
+
       await this.db
         .update(editProjects)
-        .set({ outputPath, status: 'completed', updatedAt: new Date() })
+        .set({
+          outputPath: published.outputPath,
+          status: 'completed',
+          updatedAt: new Date(),
+        })
         .where(eq(editProjects.id, id));
-      return { outputPath, status: 'completed' };
+
+      return {
+        outputPath: published.outputPath,
+        downloadUrl: published.downloadUrl,
+        storage: published.storage,
+        status: 'completed' as const,
+      };
     } catch (err) {
       await this.db
         .update(editProjects)

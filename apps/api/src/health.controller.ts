@@ -1,5 +1,6 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
+import { StorageService } from './common/storage/storage.service';
 import { AiService } from './modules/analysis/ai.service';
 import { HeyGenService } from './modules/ai-ugc/heygen.service';
 import { DB } from './db/db.module';
@@ -10,6 +11,7 @@ export class HealthController {
   constructor(
     private ai: AiService,
     private heygen: HeyGenService,
+    private storage: StorageService,
     @Inject(DB) private db: Database,
   ) {}
 
@@ -28,7 +30,9 @@ export class HealthController {
       services: {
         database,
         openai: this.ai.isConfigured(),
+        llm: this.ai.getStatus(),
         heygen: this.heygen.isConfigured(),
+        storage: this.storage.storageMode(),
       },
     };
   }

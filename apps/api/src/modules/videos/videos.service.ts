@@ -83,9 +83,9 @@ export class VideosService {
         platform,
         externalUrl: input.url,
         accountId: input.accountId,
-        caption: input.caption,
+        caption: input.caption ?? null,
         status: 'completed',
-        viralScore: Math.round(Math.random() * 100) / 10,
+        viralScore: null,
       })
       .returning();
     return {

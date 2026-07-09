@@ -1,22 +1,105 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import type { VideoAnalysis, RemixScript } from '@ugc-studio/shared';
 import { BRAND_CONTEXT } from '../../common/constants';
 
+export type LlmProvider = 'openai' | 'openrouter';
+
+export type LlmStatus = {
+  configured: boolean;
+  provider: LlmProvider | null;
+  model: string | null;
+};
+
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+
 @Injectable()
 export class AiService {
-  private openai: OpenAI | null = null;
+  private client: OpenAI | null = null;
+  private provider: LlmProvider | null = null;
+  private model: string | null = null;
 
   constructor(private config: ConfigService) {
-    const key = this.config.get<string>('OPENAI_API_KEY');
-    if (key) {
-      this.openai = new OpenAI({ apiKey: key });
+    this.initClient();
+  }
+
+  private initClient() {
+    const explicit = this.config.get<string>('AI_PROVIDER')?.toLowerCase();
+    const openrouterKey = this.config.get<string>('OPENROUTER_API_KEY');
+    const openaiKey = this.config.get<string>('OPENAI_API_KEY');
+
+    let provider: LlmProvider | null = null;
+    if (explicit === 'openrouter' || explicit === 'openai') {
+      provider = explicit;
+    } else if (openrouterKey) {
+      provider = 'openrouter';
+    } else if (openaiKey) {
+      provider = 'openai';
     }
+
+    if (!provider) return;
+
+    if (provider === 'openrouter') {
+      if (!openrouterKey) return;
+      this.provider = 'openrouter';
+      this.model =
+        this.config.get<string>('OPENROUTER_MODEL') ??
+        this.config.get<string>('AI_MODEL') ??
+        'openai/gpt-4o-mini';
+
+      const referer = this.config.get<string>('OPENROUTER_HTTP_REFERER');
+      const appName = this.config.get<string>('OPENROUTER_APP_NAME') ?? 'UGC Studio';
+
+      this.client = new OpenAI({
+        apiKey: openrouterKey,
+        baseURL: OPENROUTER_BASE_URL,
+        defaultHeaders: {
+          ...(referer ? { 'HTTP-Referer': referer } : {}),
+          'X-Title': appName,
+        },
+      });
+      return;
+    }
+
+    if (!openaiKey) return;
+    this.provider = 'openai';
+    this.model =
+      this.config.get<string>('OPENAI_MODEL') ??
+      this.config.get<string>('AI_MODEL') ??
+      'gpt-4o-mini';
+    this.client = new OpenAI({ apiKey: openaiKey });
   }
 
   isConfigured(): boolean {
-    return !!this.openai;
+    return !!this.client;
+  }
+
+  getStatus(): LlmStatus {
+    return {
+      configured: this.isConfigured(),
+      provider: this.provider,
+      model: this.model,
+    };
+  }
+
+  private requireClient(): OpenAI {
+    if (!this.client || !this.model) {
+      throw new ServiceUnavailableException(
+        'Set OPENROUTER_API_KEY or OPENAI_API_KEY for video analysis and script remix',
+      );
+    }
+    return this.client;
+  }
+
+  private async chatJson(prompt: string): Promise<string> {
+    const client = this.requireClient();
+    const response = await client.chat.completions.create({
+      model: this.model!,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+    });
+    return response.choices[0]?.message?.content ?? '{}';
   }
 
   async analyzeVideo(input: {
@@ -24,10 +107,6 @@ export class AiService {
     caption?: string;
     transcript?: string;
   }): Promise<{ analysis: VideoAnalysis; transcript: string }> {
-    if (!this.openai) {
-      return this.mockAnalysis(input);
-    }
-
     const prompt = `Analyze this short-form UGC video for viral structure.
 URL: ${input.url}
 Caption: ${input.caption ?? 'unknown'}
@@ -35,13 +114,7 @@ Transcript: ${input.transcript ?? 'not available — infer from caption'}
 
 Return JSON only with keys: format, hook, hookType, durationSec, structure (array of {segment, start, end, notes}), cta, textOverlays (array), musicStyle, replicabilityScore (0-10).`;
 
-    const response = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0]?.message?.content ?? '{}';
+    const content = await this.chatJson(prompt);
     const parsed = JSON.parse(content) as VideoAnalysis;
     return {
       analysis: parsed,
@@ -50,69 +123,13 @@ Return JSON only with keys: format, hook, hookType, durationSec, structure (arra
   }
 
   async remixScript(analysis: VideoAnalysis, brandContext?: string): Promise<RemixScript> {
-    if (!this.openai) {
-      return this.mockRemix(analysis);
-    }
-
     const prompt = `Remix this viral video structure for ClothME (fashion sizing app).
 Brand context: ${brandContext ?? BRAND_CONTEXT}
 Original analysis: ${JSON.stringify(analysis)}
 
 Return JSON with: hook, hookVariants (3 strings), body, cta, shotList (array of {segment, durationSec, visual, overlayText}), caption, hashtags (array).`;
 
-    const response = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0]?.message?.content ?? '{}';
+    const content = await this.chatJson(prompt);
     return JSON.parse(content) as RemixScript;
-  }
-
-  private mockAnalysis(input: {
-    url: string;
-    caption?: string;
-  }): { analysis: VideoAnalysis; transcript: string } {
-    return {
-      transcript: input.caption ?? 'Mock transcript — set OPENAI_API_KEY for real analysis.',
-      analysis: {
-        format: 'Problem → Demo → CTA',
-        hook: 'I never know what size to order online',
-        hookType: 'relatable_pain',
-        durationSec: 28,
-        structure: [
-          { segment: 'hook', start: 0, end: 3 },
-          { segment: 'problem', start: 3, end: 8 },
-          { segment: 'demo', start: 8, end: 22 },
-          { segment: 'cta', start: 22, end: 28 },
-        ],
-        cta: 'Link in bio',
-        textOverlays: ['POV: ordering clothes online'],
-        musicStyle: 'trending_audio',
-        replicabilityScore: 8,
-      },
-    };
-  }
-
-  private mockRemix(analysis: VideoAnalysis): RemixScript {
-    return {
-      hook: `I returned 6 dresses until I tried ClothME's body scan`,
-      hookVariants: [
-        'Stop guessing your size — scan your body in 30 seconds',
-        'POV: you finally order the right size every time',
-        'This app ended my online shopping returns era',
-      ],
-      body: `Show the problem from "${analysis.hook}", then demo ClothME body scan on phone, show size recommendation, try on outfit that fits.`,
-      cta: 'Download ClothME — link in bio',
-      shotList: analysis.structure.map((s) => ({
-        segment: s.segment,
-        durationSec: s.end - s.start,
-        visual: `Film ${s.segment} segment for ClothME`,
-        overlayText: s.segment === 'hook' ? 'POV: sizing struggles' : undefined,
-      })),
-      caption: 'Never guess your size again 👗📱 #clothme #fashion #sizing',
-      hashtags: ['clothme', 'fashion', 'sizing', 'tryon', 'bodyscan'],
-    };
   }
 }
