@@ -1,3 +1,17 @@
+export type {
+  SourceVideo,
+  VideoDetail,
+  AnalyzedVideoOption,
+  AvatarProfile,
+  VideoAnalysisRecord,
+  RemixScriptRecord,
+} from '@ugc-studio/shared';
+
+import { mockApi } from './mock-api';
+
+const USE_MOCK =
+  process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -16,9 +30,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const api = {
+const realApi = {
   health: () =>
-    request<{ status: string; services: { openai: boolean; heygen: boolean } }>('/health'),
+    request<{ status: string; services: { database: string; openai: boolean; heygen: boolean } }>('/health'),
   accounts: {
     list: () => request<unknown[]>('/accounts'),
     create: (body: unknown) =>
@@ -26,24 +40,54 @@ export const api = {
     remove: (id: string) => request(`/accounts/${id}`, { method: 'DELETE' }),
   },
   videos: {
-    list: () => request<unknown[]>('/videos'),
+    list: () => request<import('@ugc-studio/shared').SourceVideo[]>('/videos'),
     ingest: (body: { url: string; caption?: string; accountId?: string }) =>
-      request('/videos/ingest', { method: 'POST', body: JSON.stringify(body) }),
-    get: (id: string) => request(`/videos/${id}`),
+      request<import('@ugc-studio/shared').SourceVideo>('/videos/ingest', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    get: (id: string) => request<import('@ugc-studio/shared').SourceVideo>(`/videos/${id}`),
+    detail: (id: string) =>
+      request<import('@ugc-studio/shared').VideoDetail>(`/videos/${id}/detail`),
   },
   analysis: {
+    listCompleted: () =>
+      request<import('@ugc-studio/shared').AnalyzedVideoOption[]>('/analysis'),
     create: (sourceVideoId: string) =>
-      request('/analysis', { method: 'POST', body: JSON.stringify({ sourceVideoId }) }),
+      request<import('@ugc-studio/shared').VideoAnalysisRecord>('/analysis', {
+        method: 'POST',
+        body: JSON.stringify({ sourceVideoId }),
+      }),
     get: (id: string) => request(`/analysis/${id}`),
     getByVideo: (sourceVideoId: string) => request(`/analysis/video/${sourceVideoId}`),
   },
   scripts: {
     remix: (analysisId: string, brandContext?: string) =>
-      request('/scripts/remix', {
+      request<import('@ugc-studio/shared').RemixScriptRecord>('/scripts/remix', {
         method: 'POST',
         body: JSON.stringify({ analysisId, brandContext }),
       }),
     get: (id: string) => request(`/scripts/${id}`),
+  },
+  avatars: {
+    list: () => request<import('@ugc-studio/shared').AvatarProfile[]>('/avatars'),
+    create: (
+      body: Omit<import('@ugc-studio/shared').AvatarProfile, 'id' | 'createdAt' | 'updatedAt' | 'isActive'> & {
+        isActive?: boolean;
+      },
+    ) =>
+      request<import('@ugc-studio/shared').AvatarProfile>('/avatars', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    get: (id: string) =>
+      request<import('@ugc-studio/shared').AvatarProfile>(`/avatars/${id}`),
+    update: (id: string, body: Partial<import('@ugc-studio/shared').AvatarProfile>) =>
+      request<import('@ugc-studio/shared').AvatarProfile>(`/avatars/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    remove: (id: string) => request(`/avatars/${id}`, { method: 'DELETE' }),
   },
   editor: {
     create: (body: unknown) =>
@@ -78,3 +122,8 @@ export const api = {
       request('/exports', { method: 'POST', body: JSON.stringify(body) }),
   },
 };
+
+/** Mock by default. Set NEXT_PUBLIC_USE_MOCK=false to use the real API. */
+export const api = USE_MOCK ? mockApi : realApi;
+
+export const isMockMode = USE_MOCK;

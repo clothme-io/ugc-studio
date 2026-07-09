@@ -22,7 +22,8 @@ export class AiUgcController {
     @Body()
     body: {
       remixScriptId: string;
-      avatarId: string;
+      avatarId?: string;
+      avatarProfileId?: string;
       avatarName?: string;
       productAssetPath?: string;
     },

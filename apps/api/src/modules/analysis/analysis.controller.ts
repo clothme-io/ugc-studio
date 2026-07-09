@@ -7,18 +7,23 @@ import { AnalysisService } from './analysis.service';
 export class AnalysisController {
   constructor(private analysis: AnalysisService) {}
 
+  @Get()
+  listCompleted() {
+    return this.analysis.listCompleted();
+  }
+
   @Post()
   analyze(@Body() body: { sourceVideoId: string }) {
     return this.analysis.analyze(body.sourceVideoId);
   }
 
-  @Get(':id')
-  get(@Param('id') id: string) {
-    return this.analysis.get(id);
-  }
-
   @Get('video/:sourceVideoId')
   getByVideo(@Param('sourceVideoId') sourceVideoId: string) {
     return this.analysis.getByVideo(sourceVideoId);
+  }
+
+  @Get(':id')
+  get(@Param('id') id: string) {
+    return this.analysis.get(id);
   }
 }

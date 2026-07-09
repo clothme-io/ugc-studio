@@ -73,7 +73,7 @@ function EditorContent() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl p-8">
       <h1 className="text-2xl font-bold">Editor</h1>
       <p className="mt-1 text-neutral-600">
         Basic trim and text overlays. Upload footage, set in/out points, add text, render MP4.
@@ -179,7 +179,7 @@ function EditorContent() {
 
 export default function EditorPage() {
   return (
-    <AppShell pathname="/editor">
+    <AppShell>
       <Suspense>
         <EditorContent />
       </Suspense>

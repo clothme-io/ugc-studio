@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ScriptsModule } from '../scripts/scripts.module';
+import { AvatarsModule } from '../avatars/avatars.module';
 import { AiUgcController } from './ai-ugc.controller';
 import { AiUgcService } from './ai-ugc.service';
 import { HeyGenService } from './heygen.service';
 
 @Module({
-  imports: [ScriptsModule],
+  imports: [ScriptsModule, AvatarsModule],
   controllers: [AiUgcController],
   providers: [AiUgcService, HeyGenService],
   exports: [AiUgcService, HeyGenService],

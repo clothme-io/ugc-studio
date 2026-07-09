@@ -17,6 +17,11 @@ export class VideosController {
     return this.videos.ingest(body);
   }
 
+  @Get(':id/detail')
+  detail(@Param('id') id: string) {
+    return this.videos.getDetail(id);
+  }
+
   @Get(':id')
   get(@Param('id') id: string) {
     return this.videos.get(id);

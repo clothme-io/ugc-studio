@@ -11,7 +11,9 @@ export const DB = Symbol('DB');
       provide: DB,
       inject: [ConfigService],
       useFactory: (config: ConfigService): Database => {
-        const url = config.get<string>('DATABASE_URL')!;
+        const url =
+          config.get<string>('DATABASE_URL') ??
+          'postgresql://ugc:ugc@localhost:5433/ugc_studio';
         return createDb(url);
       },
     },

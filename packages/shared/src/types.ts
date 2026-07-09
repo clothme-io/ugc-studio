@@ -2,8 +2,6 @@ export type Platform = 'tiktok' | 'instagram' | 'youtube';
 
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
-export type AiUgcStatus = JobStatus;
-
 export interface VideoSegment {
   segment: string;
   start: number;
@@ -50,35 +48,77 @@ export interface TextOverlay {
   color: string;
 }
 
-export interface EditProject {
-  id: string;
-  name: string;
-  sourceVideoUrl?: string;
-  trimStartSec: number;
-  trimEndSec: number;
-  textOverlays: TextOverlay[];
-  captionStyle: 'none' | 'bottom' | 'tiktok';
-}
-
-export interface SocialAccount {
-  id: string;
-  platform: Platform;
-  handle: string;
-  displayName?: string;
-  followerCount?: number;
-  isActive: boolean;
-}
-
 export interface SourceVideo {
   id: string;
   platform: Platform;
   externalUrl: string;
-  accountHandle?: string;
-  caption?: string;
-  viewCount?: number;
-  likeCount?: number;
-  viralScore?: number;
-  thumbnailUrl?: string;
-  storagePath?: string;
-  status: JobStatus;
+  accountHandle?: string | null;
+  caption?: string | null;
+  viewCount?: number | null;
+  likeCount?: number | null;
+  viralScore?: number | null;
+  status: string;
+  createdAt: string;
+  label?: string;
+  pipeline?: {
+    analyzed: boolean;
+    remixed: boolean;
+    analysisId?: string;
+  };
+  hook?: string | null;
+  remixCount?: number;
+}
+
+export interface VideoAnalysisRecord {
+  id: string;
+  sourceVideoId: string;
+  analysis: Record<string, unknown>;
+  transcript?: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export interface AnalyzedVideoOption {
+  id: string;
+  sourceVideoId: string;
+  status: string;
+  label: string;
+  hook?: string | null;
+  createdAt: string;
+  video: SourceVideo;
+}
+
+export interface RemixScriptRecord {
+  id: string;
+  analysisId: string;
+  script: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface VideoDetail {
+  video: SourceVideo;
+  analysis: VideoAnalysisRecord | null;
+  remixes: RemixScriptRecord[];
+  pipeline: {
+    discovered: boolean;
+    analyzed: boolean;
+    remixed: boolean;
+  };
+}
+
+export interface AvatarProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  age?: number | null;
+  jobTitle?: string | null;
+  company?: string | null;
+  location?: string | null;
+  bio?: string | null;
+  heygenAvatarId?: string | null;
+  photoUrl?: string | null;
+  voiceStyle?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

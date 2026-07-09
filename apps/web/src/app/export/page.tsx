@@ -54,7 +54,7 @@ function ExportContent() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl p-8">
       <h1 className="text-2xl font-bold">Export</h1>
       <p className="mt-1 text-neutral-600">
         Download your rendered video and copy caption/hashtags for manual posting to TikTok or Instagram.
@@ -139,7 +139,7 @@ function ExportContent() {
 
 export default function ExportPage() {
   return (
-    <AppShell pathname="/export">
+    <AppShell>
       <Suspense>
         <ExportContent />
       </Suspense>

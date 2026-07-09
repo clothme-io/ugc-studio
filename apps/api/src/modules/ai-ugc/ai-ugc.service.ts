@@ -7,6 +7,7 @@ import { aiUgcJobs } from '../../db/schema';
 import { HEYGEN_AVATARS } from '../../common/constants';
 import { HeyGenService } from './heygen.service';
 import { ScriptsService } from '../scripts/scripts.service';
+import { AvatarsService } from '../avatars/avatars.service';
 
 @Injectable()
 export class AiUgcService {
@@ -14,6 +15,7 @@ export class AiUgcService {
     @Inject(DB) private db: Database,
     private heygen: HeyGenService,
     private scripts: ScriptsService,
+    private avatars: AvatarsService,
   ) {}
 
   listAvatars() {
@@ -22,7 +24,8 @@ export class AiUgcService {
 
   async create(input: {
     remixScriptId: string;
-    avatarId: string;
+    avatarId?: string;
+    avatarProfileId?: string;
     avatarName?: string;
     productAssetPath?: string;
   }) {
@@ -30,12 +33,22 @@ export class AiUgcService {
     const script = scriptRow.script as RemixScript;
     const fullScript = [script.hook, script.body, script.cta].join(' ');
 
+    let avatarId = input.avatarId ?? 'default_female_1';
+    let avatarName = input.avatarName;
+
+    if (input.avatarProfileId) {
+      const profile = await this.avatars.get(input.avatarProfileId);
+      avatarId = profile.heygenAvatarId ?? avatarId;
+      avatarName = `${profile.firstName} ${profile.lastName}`;
+    }
+
     const [job] = await this.db
       .insert(aiUgcJobs)
       .values({
         remixScriptId: input.remixScriptId,
-        avatarId: input.avatarId,
-        avatarName: input.avatarName,
+        avatarProfileId: input.avatarProfileId,
+        avatarId,
+        avatarName,
         productAssetPath: input.productAssetPath,
         status: 'processing',
       })
@@ -43,7 +56,7 @@ export class AiUgcService {
 
     try {
       const heygenJob = await this.heygen.createVideo({
-        avatarId: input.avatarId,
+        avatarId,
         script: fullScript,
       });
 

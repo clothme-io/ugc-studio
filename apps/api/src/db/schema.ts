@@ -70,6 +70,23 @@ export const remixScripts = pgTable('remix_scripts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const avatarProfiles = pgTable('avatar_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  age: integer('age'),
+  jobTitle: text('job_title'),
+  company: text('company'),
+  location: text('location'),
+  bio: text('bio'),
+  heygenAvatarId: text('heygen_avatar_id'),
+  photoUrl: text('photo_url'),
+  voiceStyle: text('voice_style'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 export const editProjects = pgTable('edit_projects', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -85,6 +102,7 @@ export const editProjects = pgTable('edit_projects', {
 export const aiUgcJobs = pgTable('ai_ugc_jobs', {
   id: uuid('id').primaryKey().defaultRandom(),
   remixScriptId: uuid('remix_script_id').references(() => remixScripts.id),
+  avatarProfileId: uuid('avatar_profile_id').references(() => avatarProfiles.id),
   avatarId: text('avatar_id').notNull(),
   avatarName: text('avatar_name'),
   productAssetPath: text('product_asset_path'),

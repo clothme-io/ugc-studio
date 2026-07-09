@@ -56,8 +56,8 @@ export default function AccountsPage() {
   }
 
   return (
-    <AppShell pathname="/accounts">
-      <div className="mx-auto max-w-3xl">
+    <AppShell>
+      <div className="mx-auto max-w-3xl p-8">
         <h1 className="text-2xl font-bold">Social Accounts</h1>
         <p className="mt-1 text-neutral-600">
           Manage multiple TikTok and Instagram accounts for ClothME UGC.
