@@ -3,6 +3,12 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import { AnalysisPanel } from '@/components/AnalysisPanel';
+import { ScriptPanel } from '@/components/ScriptPanel';
+import { PageContent } from '@/components/PageContent';
+import { PipelineStatus } from '@/components/PipelineStatus';
+import { VideoThumbnail } from '@/components/VideoThumbnail';
+import { Button, Card, Skeleton } from '@/components/ui';
 import { api, type VideoDetail } from '@/lib/api';
 
 function VideoDetailContent() {
@@ -46,18 +52,22 @@ function VideoDetailContent() {
   }
 
   if (loading) {
-    return <p className="p-8 text-sm text-neutral-500">Loading…</p>;
+    return (
+      <PageContent>
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="mt-6 h-48 w-full" />
+      </PageContent>
+    );
   }
 
   if (!detail) {
-    return <p className="p-8 text-sm text-red-600">{error || 'Video not found'}</p>;
+    return <PageContent><p className="text-sm text-red-600">{error || 'Video not found'}</p></PageContent>;
   }
 
   const { video, analysis, remixes, pipeline } = detail;
-  const analysisData = analysis?.analysis as Record<string, unknown> | undefined;
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
+    <PageContent>
       {justAdded && (
         <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           Video added to your library. Review details below, then analyze or remix.
@@ -65,45 +75,31 @@ function VideoDetailContent() {
       )}
 
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 capitalize">
-            {video.platform}
-          </p>
-          <h1 className="mt-1 text-2xl font-bold">Video detail</h1>
+        <div className="flex items-start gap-4">
+          <VideoThumbnail platform={video.platform} large />
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500 capitalize">
+              {video.platform}
+            </p>
+            <h1 className="mt-1 text-2xl font-bold">Video detail</h1>
+            <div className="mt-2">
+              <PipelineStatus discovered analyzed={pipeline.analyzed} remixed={pipeline.remixed} />
+            </div>
+          </div>
         </div>
         <Link href="/research/library" className="text-sm text-neutral-500 hover:text-neutral-800">
           ← Library
         </Link>
       </div>
 
-      <div className="mt-6 flex gap-2">
-        {(['discovered', 'analyzed', 'remixed'] as const).map((step) => (
-          <span
-            key={step}
-            className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${
-              pipeline[step]
-                ? 'bg-green-100 text-green-800'
-                : 'bg-neutral-100 text-neutral-500'
-            }`}
-          >
-            {step}
-          </span>
-        ))}
-      </div>
-
       <div className="mt-6 space-y-4">
-        <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <Card>
           <h2 className="font-semibold">Source</h2>
           <dl className="mt-3 space-y-2 text-sm">
             <div>
               <dt className="text-neutral-500">URL</dt>
               <dd>
-                <a
-                  href={video.externalUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="break-all text-brand-600 hover:underline"
-                >
+                <a href={video.externalUrl} target="_blank" rel="noreferrer" className="break-all text-brand-600 hover:underline">
                   {video.externalUrl}
                 </a>
               </dd>
@@ -125,86 +121,58 @@ function VideoDetailContent() {
               <dd>{new Date(video.createdAt).toLocaleString()}</dd>
             </div>
           </dl>
-        </div>
+        </Card>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <Card>
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Analysis</h2>
             {!pipeline.analyzed && (
-              <button
-                onClick={handleAnalyze}
-                disabled={analyzing}
-                className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-              >
+              <Button size="sm" onClick={handleAnalyze} disabled={analyzing}>
                 {analyzing ? 'Analyzing…' : 'Run analysis'}
-              </button>
+              </Button>
             )}
           </div>
 
-          {analysisData ? (
-            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <dt className="text-neutral-500">Format</dt>
-                <dd className="font-medium">{String(analysisData.format)}</dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">Hook type</dt>
-                <dd className="font-medium">{String(analysisData.hookType)}</dd>
-              </div>
-              <div className="col-span-2">
-                <dt className="text-neutral-500">Hook</dt>
-                <dd className="font-medium">&ldquo;{String(analysisData.hook)}&rdquo;</dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">Replicability</dt>
-                <dd className="font-medium">{String(analysisData.replicabilityScore)}/10</dd>
-              </div>
-              <div>
-                <dt className="text-neutral-500">CTA</dt>
-                <dd className="font-medium">{String(analysisData.cta)}</dd>
-              </div>
-            </dl>
+          {analysis ? (
+            <div className="mt-4">
+              <AnalysisPanel analysis={analysis} />
+            </div>
           ) : (
             <p className="mt-3 text-sm text-neutral-500">Not analyzed yet.</p>
           )}
 
-          {analysis?.id && !pipeline.remixed && (
-            <Link
-              href={`/research/remix?analysisId=${analysis.id}`}
-              className="mt-4 inline-block text-sm font-medium text-brand-600 hover:underline"
-            >
-              Remix for ClothME →
+          {analysis?.id && (
+            <Link href={`/research/remix?analysisId=${analysis.id}`} className="mt-4 inline-block">
+              <Button size="sm" variant="secondary">Remix for ClothME →</Button>
             </Link>
           )}
-        </div>
+        </Card>
 
         {remixes.length > 0 && (
-          <div className="rounded-xl border border-neutral-200 bg-white p-5">
+          <div className="space-y-4">
             <h2 className="font-semibold">Remix scripts ({remixes.length})</h2>
-            <ul className="mt-3 space-y-2">
-              {remixes.map((r) => {
-                const script = r.script as { hook?: string; caption?: string };
-                return (
-                  <li key={r.id} className="rounded-lg bg-neutral-50 px-3 py-2 text-sm">
-                    <p className="font-medium">{script.hook}</p>
-                    <div className="mt-2 flex gap-3">
-                      <Link href={`/ai-ugc?scriptId=${r.id}`} className="text-brand-600 hover:underline">
-                        AI UGC
-                      </Link>
-                      <Link href={`/editor?scriptId=${r.id}`} className="text-brand-600 hover:underline">
-                        Editor
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            {remixes.map((r) => (
+              <div key={r.id}>
+                <ScriptPanel script={r} />
+                <div className="mt-3 flex gap-3">
+                  <Link href={`/ai-ugc?scriptId=${r.id}`}>
+                    <Button size="sm">AI UGC</Button>
+                  </Link>
+                  <Link href={`/editor?scriptId=${r.id}`}>
+                    <Button size="sm" variant="secondary">Editor</Button>
+                  </Link>
+                  <Link href={`/export?scriptId=${r.id}`}>
+                    <Button size="sm" variant="secondary">Export</Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-    </div>
+    </PageContent>
   );
 }
 

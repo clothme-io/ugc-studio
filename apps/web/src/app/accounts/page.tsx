@@ -1,7 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { AppShell } from '@/components/AppShell';
+import { PageLayout } from '@/components/PageLayout';
+import { PageHeader } from '@/components/PageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { PlatformIcon } from '@/components/VideoThumbnail';
+import { Button, Card, Input, Select, Skeleton } from '@/components/ui';
+import { useToast } from '@/components/Toast';
 import { api } from '@/lib/api';
 
 type Account = {
@@ -14,11 +20,13 @@ type Account = {
 };
 
 export default function AccountsPage() {
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [platform, setPlatform] = useState<'tiktok' | 'instagram' | 'youtube'>('tiktok');
   const [handle, setHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState('');
 
   async function load() {
@@ -27,6 +35,8 @@ export default function AccountsPage() {
       setAccounts(list);
     } catch {
       /* API offline */
+    } finally {
+      setPageLoading(false);
     }
   }
 
@@ -42,6 +52,7 @@ export default function AccountsPage() {
       await api.accounts.create({ platform, handle, displayName: displayName || undefined });
       setHandle('');
       setDisplayName('');
+      toast('Account added');
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add account');
@@ -52,88 +63,82 @@ export default function AccountsPage() {
 
   async function handleRemove(id: string) {
     await api.accounts.remove(id);
+    toast('Account removed');
     await load();
   }
 
   return (
-    <AppShell>
-      <div className="mx-auto max-w-3xl p-8">
-        <h1 className="text-2xl font-bold">Social Accounts</h1>
-        <p className="mt-1 text-neutral-600">
-          Manage multiple TikTok and Instagram accounts for ClothME UGC.
-        </p>
+    <PageLayout>
+      <PageHeader
+        title="Social Accounts"
+        description="Manage multiple TikTok and Instagram accounts for ClothME UGC."
+      />
 
-        <form onSubmit={handleAdd} className="mt-8 grid gap-4 rounded-xl border border-neutral-200 bg-white p-5">
+      <Card>
+        <form onSubmit={handleAdd} className="grid gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium">Platform</label>
-              <select
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value as typeof platform)}
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-              >
+              <Select value={platform} onChange={(e) => setPlatform(e.target.value as typeof platform)} className="mt-1">
                 <option value="tiktok">TikTok</option>
                 <option value="instagram">Instagram</option>
                 <option value="youtube">YouTube</option>
-              </select>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-medium">Handle</label>
-              <input
+              <Input
                 required
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
                 placeholder="@clothme"
-                className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+                className="mt-1"
               />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium">Display name (optional)</label>
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-            />
+            <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1" />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-fit rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-          >
+          <Button type="submit" disabled={loading} className="w-fit">
             Add account
-          </button>
+          </Button>
         </form>
+      </Card>
 
-        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-        <div className="mt-8 space-y-3">
-          {accounts.length === 0 && (
-            <p className="text-sm text-neutral-500">No accounts yet. Add your first one above.</p>
-          )}
-          {accounts.map((account) => (
-            <div
-              key={account.id}
-              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white p-4"
-            >
-              <div>
-                <p className="font-medium capitalize">
-                  {account.platform} · @{account.handle}
-                </p>
-                {account.displayName && (
-                  <p className="text-sm text-neutral-500">{account.displayName}</p>
-                )}
+      <div className="mt-8 space-y-3">
+        {pageLoading ? (
+          <Skeleton className="h-16 w-full" />
+        ) : accounts.length === 0 ? (
+          <EmptyState message="No accounts yet. Add your first one above." />
+        ) : (
+          accounts.map((account) => (
+            <Card key={account.id} className="flex items-center justify-between !p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                  <PlatformIcon platform={account.platform} className="h-5 w-5 text-neutral-600" />
+                </div>
+                <div>
+                  <p className="font-medium capitalize">
+                    {account.platform} · @{account.handle}
+                  </p>
+                  {account.displayName && (
+                    <p className="text-sm text-neutral-500">{account.displayName}</p>
+                  )}
+                  {account.followerCount != null && (
+                    <p className="text-xs text-neutral-400">{account.followerCount.toLocaleString()} followers</p>
+                  )}
+                </div>
               </div>
-              <button
-                onClick={() => handleRemove(account.id)}
-                className="text-sm text-red-600 hover:underline"
-              >
+              <Button variant="danger" size="sm" onClick={() => handleRemove(account.id)}>
                 Remove
-              </button>
-            </div>
-          ))}
-        </div>
+              </Button>
+            </Card>
+          ))
+        )}
       </div>
-    </AppShell>
+    </PageLayout>
   );
 }

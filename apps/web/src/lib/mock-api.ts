@@ -138,6 +138,7 @@ const seedAvatars: AvatarProfile[] = [
     location: 'Los Angeles, CA',
     bio: 'Relatable fashion enthusiast who struggled with online sizing until finding body scan tech.',
     heygenAvatarId: 'default_female_1',
+    photoUrl: 'https://api.dicebear.com/7.x/personas/svg?seed=Alex',
     voiceStyle: 'casual, upbeat',
     isActive: true,
     createdAt: daysAgo(5),
@@ -153,6 +154,7 @@ const seedAvatars: AvatarProfile[] = [
     location: 'New York, NY',
     bio: 'Plus-size styling tips and honest try-on reviews for everyday shoppers.',
     heygenAvatarId: 'default_female_2',
+    photoUrl: 'https://api.dicebear.com/7.x/personas/svg?seed=Jordan',
     voiceStyle: 'warm, conversational',
     isActive: true,
     createdAt: daysAgo(3),
@@ -175,6 +177,26 @@ const seedAccounts: Array<{
 
 const seedExports: Record<string, unknown>[] = [];
 
+type EditProject = {
+  id: string;
+  name: string;
+  remixScriptId?: string;
+  status: string;
+  editState: Record<string, unknown>;
+  outputPath?: string;
+};
+
+type AiUgcJob = {
+  id: string;
+  remixScriptId: string;
+  avatarProfileId?: string;
+  avatarId: string;
+  avatarName: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  outputPath?: string;
+  createdAt: string;
+};
+
 // ── In-memory store (persists for the browser session via module singleton) ──
 
 let videos = [...seedVideos];
@@ -183,6 +205,8 @@ let remixes = [...seedRemixes];
 let avatars = [...seedAvatars];
 let accounts = [...seedAccounts];
 let exports_ = [...seedExports];
+let editProjects: Record<string, EditProject> = {};
+let aiUgcJobs: AiUgcJob[] = [];
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}`;
@@ -354,6 +378,9 @@ export const mockApi = {
   },
 
   scripts: {
+    list: () => delay([...remixes]),
+    listByAnalysis: (analysisId: string) =>
+      delay(remixes.filter((r) => r.analysisId === analysisId)),
     remix: (analysisId: string) => {
       const analysis = analyses.find((a) => a.id === analysisId);
       if (!analysis) throw new Error('Analysis not found');
@@ -422,18 +449,40 @@ export const mockApi = {
   },
 
   editor: {
-    create: (body: { name: string; remixScriptId?: string; editState?: unknown }) =>
-      delay({
+    create: (body: { name: string; remixScriptId?: string; editState?: unknown }) => {
+      const project: EditProject = {
         id: uid('edit'),
         name: body.name,
         remixScriptId: body.remixScriptId,
         status: 'pending',
-        editState: body.editState ?? { trimStartSec: 0, trimEndSec: 30, textOverlays: [], captionStyle: 'none' },
-      }),
-    get: (id: string) => delay({ id, status: 'pending' }),
-    update: (id: string, editState: unknown) => delay({ id, editState, status: 'pending' }),
-    render: (_id: string, _file: File) =>
-      delay({ outputPath: '/mock/output/render.mp4', status: 'completed' }, 800),
+        editState: (body.editState as Record<string, unknown>) ?? {
+          trimStartSec: 0,
+          trimEndSec: 30,
+          textOverlays: [],
+          captionStyle: 'none',
+        },
+      };
+      editProjects[project.id] = project;
+      return delay(project);
+    },
+    get: (id: string) => {
+      const p = editProjects[id];
+      if (!p) throw new Error('Edit project not found');
+      return delay(p);
+    },
+    update: (id: string, editState: unknown) => {
+      const p = editProjects[id];
+      if (!p) throw new Error('Edit project not found');
+      p.editState = editState as Record<string, unknown>;
+      return delay(p);
+    },
+    render: (id: string, _file: File) => {
+      const p = editProjects[id];
+      if (!p) throw new Error('Edit project not found');
+      p.status = 'completed';
+      p.outputPath = `/mock/output/${id}.mp4`;
+      return delay({ outputPath: p.outputPath, status: 'completed', downloadUrl: p.outputPath }, 800);
+    },
   },
 
   aiUgc: {
@@ -442,30 +491,85 @@ export const mockApi = {
         { id: 'default_female_1', name: 'Alex — Casual Creator' },
         { id: 'default_female_2', name: 'Jordan — Fashion Enthusiast' },
       ]),
-    list: () => delay([]),
+    list: () => delay([...aiUgcJobs]),
     create: (body: { remixScriptId: string; avatarProfileId?: string }) => {
       const profile = body.avatarProfileId
         ? avatars.find((a) => a.id === body.avatarProfileId)
         : null;
-      return delay({
+      const job: AiUgcJob = {
         id: uid('ugc'),
         remixScriptId: body.remixScriptId,
         avatarProfileId: body.avatarProfileId,
         avatarId: profile?.heygenAvatarId ?? 'default_female_1',
         avatarName: profile ? `${profile.firstName} ${profile.lastName}` : 'Mock Avatar',
-        status: 'completed',
-        outputPath: '/mock/output/ai-ugc.mp4',
-      }, 1200);
+        status: 'processing',
+        createdAt: new Date().toISOString(),
+      };
+      aiUgcJobs = [job, ...aiUgcJobs];
+      setTimeout(() => {
+        const idx = aiUgcJobs.findIndex((j) => j.id === job.id);
+        if (idx >= 0) {
+          aiUgcJobs[idx] = {
+            ...aiUgcJobs[idx],
+            status: 'completed',
+            outputPath: `/mock/output/${job.id}.mp4`,
+          };
+        }
+      }, 2500);
+      return delay(job, 400);
     },
-    get: (id: string) => delay({ id, status: 'completed', outputPath: '/mock/output/ai-ugc.mp4' }),
+    get: (id: string) => {
+      const job = aiUgcJobs.find((j) => j.id === id);
+      if (!job) throw new Error('Job not found');
+      return delay(job);
+    },
   },
 
   exports: {
     list: () => delay([...exports_]),
     create: (body: Record<string, unknown>) => {
-      const row = { id: uid('export'), createdAt: new Date().toISOString(), ...body };
+      const row = {
+        id: uid('export'),
+        createdAt: new Date().toISOString(),
+        downloadUrl: body.outputPath,
+        ...body,
+      };
       exports_ = [row, ...exports_];
       return delay(row);
+    },
+  },
+
+  activity: {
+    list: () => {
+      const items = [
+        ...videos.slice(0, 3).map((v) => ({
+          id: `act-vid-${v.id}`,
+          type: 'discovered' as const,
+          label: `Discovered: ${v.caption?.slice(0, 50) ?? v.platform}`,
+          href: `/research/videos/${v.id}`,
+          createdAt: v.createdAt,
+        })),
+        ...analyses.map((a) => {
+          const video = videos.find((v) => v.id === a.sourceVideoId);
+          return {
+            id: `act-ana-${a.id}`,
+            type: 'analyzed' as const,
+            label: `Analyzed: ${(a.analysis as { hook?: string }).hook?.slice(0, 50) ?? video?.platform}`,
+            href: `/research/analyze?videoId=${a.sourceVideoId}`,
+            createdAt: a.createdAt,
+          };
+        }),
+        ...remixes.map((r) => ({
+          id: `act-remix-${r.id}`,
+          type: 'remixed' as const,
+          label: `Remixed: ${(r.script as { hook?: string }).hook?.slice(0, 50) ?? 'ClothME script'}`,
+          href: `/research/remix?analysisId=${r.analysisId}`,
+          createdAt: r.createdAt,
+        })),
+      ];
+      return delay(
+        items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8),
+      );
     },
   },
 };

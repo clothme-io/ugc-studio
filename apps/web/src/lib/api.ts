@@ -62,12 +62,15 @@ const realApi = {
     getByVideo: (sourceVideoId: string) => request(`/analysis/video/${sourceVideoId}`),
   },
   scripts: {
+    list: () => request<import('@ugc-studio/shared').RemixScriptRecord[]>('/scripts'),
+    listByAnalysis: (analysisId: string) =>
+      request<import('@ugc-studio/shared').RemixScriptRecord[]>(`/scripts/analysis/${analysisId}`),
     remix: (analysisId: string, brandContext?: string) =>
       request<import('@ugc-studio/shared').RemixScriptRecord>('/scripts/remix', {
         method: 'POST',
         body: JSON.stringify({ analysisId, brandContext }),
       }),
-    get: (id: string) => request(`/scripts/${id}`),
+    get: (id: string) => request<import('@ugc-studio/shared').RemixScriptRecord>(`/scripts/${id}`),
   },
   avatars: {
     list: () => request<import('@ugc-studio/shared').AvatarProfile[]>('/avatars'),
@@ -120,6 +123,12 @@ const realApi = {
     list: () => request<unknown[]>('/exports'),
     create: (body: unknown) =>
       request('/exports', { method: 'POST', body: JSON.stringify(body) }),
+  },
+  activity: {
+    list: () =>
+      request<Array<{ id: string; type: string; label: string; href: string; createdAt: string }>>(
+        '/activity',
+      ),
   },
 };
 

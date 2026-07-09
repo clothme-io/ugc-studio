@@ -3,6 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { PageContent } from '@/components/PageContent';
+import { PageHeader } from '@/components/PageHeader';
+import { PipelineStatus } from '@/components/PipelineStatus';
+import { VideoThumbnail } from '@/components/VideoThumbnail';
+import { Button, Skeleton } from '@/components/ui';
 import { api, type SourceVideo } from '@/lib/api';
 
 type Filter = 'all' | 'discovered' | 'analyzed' | 'remixed';
@@ -13,21 +18,6 @@ const filters: { id: Filter; label: string }[] = [
   { id: 'analyzed', label: 'Analyzed' },
   { id: 'remixed', label: 'Remixed' },
 ];
-
-function StatusBadge({ label, active }: { label: string; active: boolean }) {
-  return (
-    <span
-      className={cn(
-        'rounded-full px-2 py-0.5 text-xs font-medium capitalize',
-        active
-          ? 'bg-green-100 text-green-800'
-          : 'bg-neutral-100 text-neutral-400',
-      )}
-    >
-      {label}
-    </span>
-  );
-}
 
 export default function LibraryPage() {
   const [videos, setVideos] = useState<SourceVideo[]>([]);
@@ -44,7 +34,7 @@ export default function LibraryPage() {
   const filtered = useMemo(() => {
     switch (filter) {
       case 'discovered':
-        return videos.filter((v) => !v.pipeline?.analyzed);
+        return videos;
       case 'analyzed':
         return videos.filter((v) => v.pipeline?.analyzed);
       case 'remixed':
@@ -57,7 +47,7 @@ export default function LibraryPage() {
   const counts = useMemo(
     () => ({
       all: videos.length,
-      discovered: videos.filter((v) => !v.pipeline?.analyzed).length,
+      discovered: videos.length,
       analyzed: videos.filter((v) => v.pipeline?.analyzed).length,
       remixed: videos.filter((v) => v.pipeline?.remixed).length,
     }),
@@ -65,23 +55,18 @@ export default function LibraryPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl p-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Library</h1>
-          <p className="mt-1 text-neutral-600">
-            All your discovered videos with pipeline status. Click any row for full analysis details.
-          </p>
-        </div>
-        <Link
-          href="/research/discover"
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          + Discover
-        </Link>
-      </div>
+    <PageContent maxWidth="4xl">
+      <PageHeader
+        title="Library"
+        description="All your discovered videos with pipeline status. Click any row for full analysis details."
+        action={
+          <Link href="/research/discover">
+            <Button>+ Discover</Button>
+          </Link>
+        }
+      />
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2">
         {filters.map(({ id, label }) => (
           <button
             key={id}
@@ -101,25 +86,22 @@ export default function LibraryPage() {
       </div>
 
       {loading ? (
-        <p className="mt-8 text-sm text-neutral-500">Loading…</p>
+        <div className="mt-6 space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="mt-8 rounded-xl border border-dashed border-neutral-300 p-8 text-center">
           <p className="text-neutral-600">
             {filter === 'all' ? 'No videos yet.' : `No ${filter} videos.`}
           </p>
           {filter === 'all' ? (
-            <Link
-              href="/research/discover"
-              className="mt-2 inline-block text-sm text-brand-600 hover:underline"
-            >
+            <Link href="/research/discover" className="mt-2 inline-block text-sm text-brand-600 hover:underline">
               Add your first video →
             </Link>
           ) : (
-            <button
-              type="button"
-              onClick={() => setFilter('all')}
-              className="mt-2 text-sm text-brand-600 hover:underline"
-            >
+            <button type="button" onClick={() => setFilter('all')} className="mt-2 text-sm text-brand-600 hover:underline">
               Show all videos
             </button>
           )}
@@ -130,14 +112,17 @@ export default function LibraryPage() {
             <Link
               key={v.id}
               href={`/research/videos/${v.id}`}
-              className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-white p-4 transition-shadow hover:shadow-sm"
+              className="flex items-center gap-4 rounded-xl border border-neutral-200 bg-white p-4 transition-shadow hover:shadow-sm"
             >
+              <VideoThumbnail platform={v.platform} />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate font-medium capitalize">{v.platform}</p>
-                  <StatusBadge label="discovered" active />
-                  <StatusBadge label="analyzed" active={!!v.pipeline?.analyzed} />
-                  <StatusBadge label="remixed" active={!!v.pipeline?.remixed} />
+                  <PipelineStatus
+                    discovered
+                    analyzed={!!v.pipeline?.analyzed}
+                    remixed={!!v.pipeline?.remixed}
+                  />
                 </div>
                 <p className="mt-1 truncate text-sm text-neutral-700">
                   {v.hook ? `"${v.hook}"` : v.caption?.slice(0, 80) ?? v.externalUrl}
@@ -157,6 +142,6 @@ export default function LibraryPage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContent>
   );
 }

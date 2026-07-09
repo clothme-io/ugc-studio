@@ -3,6 +3,11 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { ScriptPanel } from '@/components/ScriptPanel';
+import { PageContent } from '@/components/PageContent';
+import { PageHeader } from '@/components/PageHeader';
+import { EmptyState } from '@/components/EmptyState';
+import { Button, Select, Skeleton } from '@/components/ui';
 import { api, type AnalyzedVideoOption, type RemixScriptRecord } from '@/lib/api';
 
 function RemixContent() {
@@ -12,15 +17,30 @@ function RemixContent() {
   const [analyzed, setAnalyzed] = useState<AnalyzedVideoOption[]>([]);
   const [analysisId, setAnalysisId] = useState(initialId);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [script, setScript] = useState<RemixScriptRecord | null>(null);
+  const [existingScripts, setExistingScripts] = useState<RemixScriptRecord[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
     api.analysis.listCompleted().then((list) => {
       setAnalyzed(list);
       if (initialId) setAnalysisId(initialId);
+      setPageLoading(false);
     });
   }, [initialId]);
+
+  useEffect(() => {
+    if (!analysisId) {
+      setExistingScripts([]);
+      setScript(null);
+      return;
+    }
+    api.scripts.listByAnalysis(analysisId).then((list) => {
+      setExistingScripts(list);
+      if (list[0]) setScript(list[0]);
+    });
+  }, [analysisId]);
 
   async function handleRemix(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +50,7 @@ function RemixContent() {
     try {
       const result = await api.scripts.remix(analysisId);
       setScript(result);
+      setExistingScripts((prev) => [result, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Remix failed');
     } finally {
@@ -37,32 +58,31 @@ function RemixContent() {
     }
   }
 
-  const scriptData = script?.script as Record<string, unknown> | undefined;
-  const hookVariants = (scriptData?.hookVariants as string[]) ?? [];
   const selected = analyzed.find((a) => a.id === analysisId);
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
-      <h1 className="text-2xl font-bold">Remix</h1>
-      <p className="mt-1 text-neutral-600">
-        Pick an analyzed video to generate a ClothME script that preserves the viral format.
-      </p>
+    <PageContent>
+      <PageHeader
+        title="Remix"
+        description="Pick an analyzed video to generate a ClothME script that preserves the viral format."
+      />
 
-      <form onSubmit={handleRemix} className="mt-8 space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Analyzed video</label>
-          {analyzed.length === 0 ? (
-            <p className="mt-1 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-              No analyzed videos yet.{' '}
-              <Link href="/research/analyze" className="font-medium text-brand-600 hover:underline">
-                Analyze one first →
-              </Link>
-            </p>
-          ) : (
-            <select
+      {pageLoading ? (
+        <Skeleton className="h-32 w-full" />
+      ) : analyzed.length === 0 ? (
+        <EmptyState
+          message="No analyzed videos yet. Run analysis on a discovered video first."
+          actionLabel="Go to Analyze"
+          actionHref="/research/analyze"
+        />
+      ) : (
+        <form onSubmit={handleRemix} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium">Analyzed video</label>
+            <Select
               value={analysisId}
               onChange={(e) => setAnalysisId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
+              className="mt-1"
             >
               <option value="">Select an analyzed video…</option>
               {analyzed.map((a) => (
@@ -71,76 +91,65 @@ function RemixContent() {
                   {a.hook ? ` — "${a.hook.slice(0, 40)}…"` : ''}
                 </option>
               ))}
-            </select>
+            </Select>
+          </div>
+
+          {selected && (
+            <p className="text-xs text-neutral-500">
+              Source:{' '}
+              <Link href={`/research/videos/${selected.sourceVideoId}`} className="text-brand-600 hover:underline">
+                view video detail
+              </Link>
+            </p>
           )}
-        </div>
 
-        {selected && (
-          <p className="text-xs text-neutral-500">
-            Source:{' '}
-            <Link
-              href={`/research/videos/${selected.sourceVideoId}`}
-              className="text-brand-600 hover:underline"
-            >
-              view video detail
-            </Link>
-          </p>
-        )}
+          {existingScripts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium">Existing scripts</label>
+              <Select
+                value={script?.id ?? ''}
+                onChange={(e) => {
+                  const found = existingScripts.find((s) => s.id === e.target.value);
+                  if (found) setScript(found);
+                }}
+                className="mt-1"
+              >
+                {existingScripts.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {(s.script as { hook?: string }).hook?.slice(0, 60) ?? s.id}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading || !analysisId}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-        >
-          {loading ? 'Remixing…' : 'Remix for ClothME'}
-        </button>
-      </form>
+          <Button type="submit" disabled={loading || !analysisId}>
+            {loading ? 'Remixing…' : 'Generate new remix'}
+          </Button>
+        </form>
+      )}
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      {scriptData && (
+      {script && (
         <div className="mt-8 space-y-4">
-          <div className="rounded-xl border border-neutral-200 bg-white p-5">
-            <h2 className="font-semibold">Hook</h2>
-            <p className="mt-2 text-lg">{String(scriptData.hook)}</p>
-            {hookVariants.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-neutral-500">A/B variants</h3>
-                <ul className="mt-2 space-y-1 text-sm">
-                  {hookVariants.map((v) => (
-                    <li key={v} className="rounded bg-neutral-50 px-3 py-2">
-                      {v}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-neutral-200 bg-white p-5">
-            <h2 className="font-semibold">Caption</h2>
-            <p className="mt-2 text-sm">{String(scriptData.caption)}</p>
-          </div>
-
-          {script?.id ? (
+          <ScriptPanel script={script} />
+          {script.id && (
             <div className="flex gap-3">
-              <Link
-                href={`/ai-ugc?scriptId=${script.id}`}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-              >
-                Generate AI UGC →
+              <Link href={`/ai-ugc?scriptId=${script.id}`}>
+                <Button>Generate AI UGC →</Button>
               </Link>
-              <Link
-                href={`/editor?scriptId=${script.id}`}
-                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-50"
-              >
-                Open Editor →
+              <Link href={`/editor?scriptId=${script.id}`}>
+                <Button variant="secondary">Open Editor →</Button>
+              </Link>
+              <Link href={`/export?scriptId=${script.id}`}>
+                <Button variant="secondary">Export →</Button>
               </Link>
             </div>
-          ) : null}
+          )}
         </div>
       )}
-    </div>
+    </PageContent>
   );
 }
 

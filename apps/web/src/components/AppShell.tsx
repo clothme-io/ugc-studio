@@ -16,6 +16,8 @@ import {
   Video,
   Link2,
   Library,
+  Eye,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +28,7 @@ const mainNav = [
   { href: '/ai-ugc', label: 'AI UGC', icon: Sparkles },
   { href: '/avatars', label: 'Avatars', icon: UserCircle2, section: 'avatars' },
   { href: '/accounts', label: 'Accounts', icon: Users },
+  { href: '/monitor', label: 'Monitor', icon: BarChart3 },
   { href: '/export', label: 'Export', icon: Download },
 ];
 
@@ -34,6 +37,7 @@ const researchNav = [
   { href: '/research/analyze', label: 'Analyze', icon: ScanSearch },
   { href: '/research/remix', label: 'Remix', icon: PenLine },
   { href: '/research/library', label: 'Library', icon: Library },
+  { href: '/research/spy', label: 'Account Spy', icon: Eye },
 ];
 
 function isActive(pathname: string, href: string) {

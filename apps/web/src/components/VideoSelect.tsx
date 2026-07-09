@@ -1,6 +1,7 @@
 'use client';
 
 import type { SourceVideo } from '@/lib/api';
+import { Select } from '@/components/ui';
 
 type Props = {
   videos: SourceVideo[];
@@ -20,17 +21,13 @@ export function VideoSelect({ videos, value, onChange, placeholder, emptyMessage
   }
 
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm"
-    >
+    <Select value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{placeholder ?? 'Select a video…'}</option>
       {videos.map((v) => (
         <option key={v.id} value={v.id}>
           {v.label ?? `[${v.platform}] ${v.caption?.slice(0, 50) ?? v.externalUrl.slice(0, 50)}`}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }
