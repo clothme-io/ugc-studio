@@ -9,11 +9,12 @@ import { PageHeader } from '@/components/PageHeader';
 import { VideoSelect } from '@/components/VideoSelect';
 import { Button, Skeleton } from '@/components/ui';
 import { api, type SourceVideo, type VideoAnalysisRecord } from '@/lib/api';
+import { uuidFromQuery } from '@/lib/uuid';
 
 function AnalyzeContent() {
   const params = useSearchParams();
   const router = useRouter();
-  const initialId = params.get('videoId') ?? '';
+  const initialId = uuidFromQuery(params.get('videoId'));
 
   const [videos, setVideos] = useState<SourceVideo[]>([]);
   const [videoId, setVideoId] = useState(initialId);

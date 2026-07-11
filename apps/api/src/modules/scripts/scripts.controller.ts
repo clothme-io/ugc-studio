@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { ApiSecretGuard } from '../../common/api-secret.guard';
+import { assertUuid } from '../../common/uuid';
 import { ScriptsService } from './scripts.service';
 
 @Controller('scripts')
@@ -13,17 +14,18 @@ export class ScriptsController {
   }
 
   @Get('analysis/:analysisId')
-  listByAnalysis(@Param('analysisId') analysisId: string) {
+  listByAnalysis(@Param('analysisId', ParseUUIDPipe) analysisId: string) {
     return this.scripts.listByAnalysis(analysisId);
   }
 
   @Post('remix')
   remix(@Body() body: { analysisId: string; brandContext?: string }) {
+    assertUuid(body.analysisId, 'analysisId');
     return this.scripts.remix(body.analysisId, body.brandContext);
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
+  get(@Param('id', ParseUUIDPipe) id: string) {
     return this.scripts.get(id);
   }
 }

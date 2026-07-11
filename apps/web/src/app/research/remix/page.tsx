@@ -9,10 +9,11 @@ import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Button, Select, Skeleton } from '@/components/ui';
 import { api, type AnalyzedVideoOption, type RemixScriptRecord } from '@/lib/api';
+import { uuidFromQuery } from '@/lib/uuid';
 
 function RemixContent() {
   const params = useSearchParams();
-  const initialId = params.get('analysisId') ?? '';
+  const initialId = uuidFromQuery(params.get('analysisId'));
 
   const [analyzed, setAnalyzed] = useState<AnalyzedVideoOption[]>([]);
   const [analysisId, setAnalysisId] = useState(initialId);

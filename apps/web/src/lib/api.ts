@@ -25,7 +25,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text || res.statusText);
+    try {
+      const json = JSON.parse(text) as { message?: string | string[] };
+      const msg = json.message;
+      throw new Error(Array.isArray(msg) ? msg.join(', ') : msg ?? text || res.statusText);
+    } catch (e) {
+      if (e instanceof Error && e.message !== text) throw e;
+      throw new Error(text || res.statusText);
+    }
   }
   return res.json() as Promise<T>;
 }

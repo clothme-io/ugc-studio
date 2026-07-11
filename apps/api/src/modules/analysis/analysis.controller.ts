@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { ApiSecretGuard } from '../../common/api-secret.guard';
+import { assertUuid } from '../../common/uuid';
 import { AnalysisService } from './analysis.service';
 
 @Controller('analysis')
@@ -14,16 +15,17 @@ export class AnalysisController {
 
   @Post()
   analyze(@Body() body: { sourceVideoId: string }) {
+    assertUuid(body.sourceVideoId, 'sourceVideoId');
     return this.analysis.analyze(body.sourceVideoId);
   }
 
   @Get('video/:sourceVideoId')
-  getByVideo(@Param('sourceVideoId') sourceVideoId: string) {
+  getByVideo(@Param('sourceVideoId', ParseUUIDPipe) sourceVideoId: string) {
     return this.analysis.getByVideo(sourceVideoId);
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
+  get(@Param('id', ParseUUIDPipe) id: string) {
     return this.analysis.get(id);
   }
 }

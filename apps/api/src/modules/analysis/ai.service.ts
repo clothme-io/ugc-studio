@@ -94,12 +94,24 @@ export class AiService {
 
   private async chatJson(prompt: string): Promise<string> {
     const client = this.requireClient();
-    const response = await client.chat.completions.create({
-      model: this.model!,
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-    });
-    return response.choices[0]?.message?.content ?? '{}';
+    try {
+      const response = await client.chat.completions.create({
+        model: this.model!,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+      });
+      return response.choices[0]?.message?.content ?? '{}';
+    } catch (err) {
+      if (err instanceof OpenAI.APIError) {
+        if (err.status === 402) {
+          throw new ServiceUnavailableException(
+            'OpenRouter credits exhausted. Add credits at https://openrouter.ai/settings/credits or set OPENAI_API_KEY in .env to use direct OpenAI.',
+          );
+        }
+        throw new ServiceUnavailableException(`LLM request failed (${err.status}): ${err.message}`);
+      }
+      throw err;
+    }
   }
 
   async analyzeVideo(input: {

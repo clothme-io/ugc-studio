@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { Button, Card, Select, Skeleton } from '@/components/ui';
 import { api, type AvatarProfile, type RemixScriptRecord } from '@/lib/api';
+import { uuidFromQuery } from '@/lib/uuid';
 
 type Job = {
   id: string;
@@ -19,8 +20,8 @@ type Job = {
 
 function AiUgcContent() {
   const params = useSearchParams();
-  const initialScriptId = params.get('scriptId') ?? '';
-  const initialAvatarProfileId = params.get('avatarProfileId') ?? '';
+  const initialScriptId = uuidFromQuery(params.get('scriptId'));
+  const initialAvatarProfileId = uuidFromQuery(params.get('avatarProfileId'));
 
   const [scripts, setScripts] = useState<RemixScriptRecord[]>([]);
   const [scriptId, setScriptId] = useState(initialScriptId);

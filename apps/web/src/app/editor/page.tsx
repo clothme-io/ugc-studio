@@ -11,10 +11,11 @@ import { CopyButton } from '@/components/CopyButton';
 import { Button, Card, Input, Label, Select } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { api, type RemixScriptRecord } from '@/lib/api';
+import { uuidFromQuery } from '@/lib/uuid';
 
 function EditorContent() {
   const params = useSearchParams();
-  const scriptId = params.get('scriptId') ?? undefined;
+  const scriptId = uuidFromQuery(params.get('scriptId')) || undefined;
   const { toast } = useToast();
 
   const [scripts, setScripts] = useState<RemixScriptRecord[]>([]);

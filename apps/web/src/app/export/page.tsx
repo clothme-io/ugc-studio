@@ -9,6 +9,7 @@ import { CopyButton } from '@/components/CopyButton';
 import { Button, Card, Input, Textarea } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { api } from '@/lib/api';
+import { uuidFromQuery } from '@/lib/uuid';
 
 type Account = { id: string; platform: string; handle: string };
 
@@ -17,9 +18,9 @@ function ExportContent() {
   const { toast } = useToast();
 
   const [outputPath, setOutputPath] = useState(params.get('outputPath') ?? '');
-  const [editProjectId, setEditProjectId] = useState(params.get('editProjectId') ?? '');
-  const [aiUgcJobId, setAiUgcJobId] = useState(params.get('aiUgcJobId') ?? '');
-  const [scriptId, setScriptId] = useState(params.get('scriptId') ?? '');
+  const [editProjectId, setEditProjectId] = useState(uuidFromQuery(params.get('editProjectId')));
+  const [aiUgcJobId, setAiUgcJobId] = useState(uuidFromQuery(params.get('aiUgcJobId')));
+  const [scriptId, setScriptId] = useState(uuidFromQuery(params.get('scriptId')));
   const [caption, setCaption] = useState('');
   const [hashtags, setHashtags] = useState('');
   const [accounts, setAccounts] = useState<Account[]>([]);
