@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+.git
+.next
+**/.next
+dist
+**/dist
+uploads
+**/.env
+**/.env.local
+*.md
+!README.md
+.DS_Store
+coverage
+.turbo
+apps/web/.next
+terminals

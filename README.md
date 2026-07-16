@@ -14,7 +14,31 @@ Internal ClothME tool to discover viral UGC, analyze structure, remix scripts fo
 | Video | FFmpeg (trim, text overlays, 9:16 export) |
 | Storage | Local disk → Bunny.net CDN (optional) |
 
-## Quick start
+## Quick start (Docker — recommended for local testing)
+
+Runs **Postgres, Redis, API, and Web** in containers. Production deploys to **Railway**; this is local-only.
+
+```bash
+cp .env.example .env
+# Add OPENROUTER_API_KEY or OPENAI_API_KEY (and optional HEYGEN_API_KEY)
+
+docker compose up --build -d
+# or: npx pnpm@9.15.9 docker:up
+```
+
+- Web: http://localhost:3100 (real API, mock mode off)
+- API: http://localhost:4000/health
+- Postgres (host tools): `localhost:5433`
+
+View logs: `docker compose logs -f api web`
+
+Stop: `docker compose down`
+
+> **Note:** `NEXT_PUBLIC_*` vars are baked in at web image build time. After changing them, rebuild: `docker compose up --build -d web`
+
+## Quick start (native dev — hot reload)
+
+For active development with file watching:
 
 ```bash
 # Prerequisites: Node 20+, Docker, FFmpeg
@@ -28,13 +52,13 @@ cp .env.example .env
 # Optional: HEYGEN_API_KEY, Bunny.net storage vars
 
 pnpm install
-pnpm docker:up          # Postgres on :5433, Redis on :6380
+pnpm docker:infra       # Postgres + Redis only
 pnpm db:migrate
 
 # Terminal 1 — API
 pnpm dev:api
 
-# Terminal 2 — Web (mock mode by default)
+# Terminal 2 — Web
 pnpm dev:web
 ```
 

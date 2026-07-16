@@ -1,3 +1,6 @@
+# Local development — full stack (Postgres, Redis, API, Web)
+# Production deploys to Railway; this compose file is for local testing only.
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -9,6 +12,11 @@ services:
       POSTGRES_DB: ugc_studio
     volumes:
       - ugc_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ugc -d ugc_studio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -17,6 +25,42 @@ services:
     volumes:
       - ugc_redis:/data
 
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://ugc:ugc@postgres:5432/ugc_studio
+      REDIS_URL: redis://redis:6379
+      API_PUBLIC_URL: http://localhost:4000
+      WEB_ORIGIN: http://localhost:3100
+      UPLOAD_DIR: /app/apps/api/uploads
+    volumes:
+      - api_uploads:/app/apps/api/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_USE_MOCK: "false"
+    ports:
+      - "3100:3100"
+    depends_on:
+      - api
+
 volumes:
   ugc_postgres:
   ugc_redis:
+  api_uploads:

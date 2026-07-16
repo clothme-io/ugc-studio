@@ -10,8 +10,10 @@
     "build": "pnpm --filter @ugc-studio/shared build && pnpm --filter @ugc-studio/api build && pnpm --filter @ugc-studio/web build",
     "db:generate": "pnpm --filter @ugc-studio/api db:generate",
     "db:migrate": "pnpm --filter @ugc-studio/api db:migrate",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:infra": "docker compose up -d postgres redis"
   },
   "engines": {
     "node": ">=20"
